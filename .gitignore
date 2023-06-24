@@ -1,0 +1,5 @@
+zig-cache
+*.bc
+*.o
+*.wasm
+/goroc
