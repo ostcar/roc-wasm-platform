@@ -2,4 +2,5 @@ zig-cache
 *.bc
 *.o
 *.wasm
+*.tar.br
 /examples/webserver/webserver

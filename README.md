@@ -58,7 +58,7 @@ You can use zig 0.9.1 or zig 0.10.1. Both versions have issues.
 #### 0.9.1
 
 There is a caching bug in zig 0.9.1. To work around it, you have to remove the
-zig cache before running `roc build`. See:
+zig cache before running `roc build`. Every time! See:
 https://github.com/ziglang/zig/issues/12864
 
 ```bash
@@ -73,9 +73,6 @@ To use zig 0.10.1, there are two small required changes to the roc sourcecode:
 https://github.com/roc-lang/roc/compare/main...ostcar:zig_0.10
 
 
-The roc compiler uses zig 0.9.1. So the buildin object files where created with
-this version.
-
 To use zig 0.10.1 is possible, but there will be warnings like
 
 ```
@@ -83,8 +80,3 @@ wasm-ld: warning: Linking two modules of different data layouts: '/home/max/src/
 ```
 
 It seems, that they can be ignored.
-
-
-## TODO
-
-* Bundle the platform and use it in the examples
