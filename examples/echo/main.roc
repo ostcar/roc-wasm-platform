@@ -10,8 +10,8 @@ app "echo"
     provides [main] to pf
 
 
-main : Arg.FromHost {input: Str} -> Arg.ToHost Str
-main = \arg -> echo arg.input
+main : Arg.FromHost Str -> Arg.ToHost Str
+main = \arg -> echo arg
 
 echo : Str -> Str
 echo = \shout ->

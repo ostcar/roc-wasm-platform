@@ -4,7 +4,7 @@
     <script src="./host.js"></script>
     <script>
       const elem = document.getElementById("output");
-      roc_web_platform_run("./echo.wasm", (string_from_roc) => {
+      roc_web_platform_run("./echo.wasm", "hello from javascript", (string_from_roc) => {
         elem.textContent = string_from_roc;
       });
     </script>
