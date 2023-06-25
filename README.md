@@ -11,8 +11,11 @@ rm -r platform/zig-cache
 
 2. Call roc
 
-```
+```bash
 roc build --target=wasm32
+
+# Alternatively from roc-lang/roc repository 
+cargo run -- build ../goroc/main.roc --target=wasm32
 ```
 
 You now have a file called `wasm.wasm`

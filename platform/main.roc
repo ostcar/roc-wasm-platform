@@ -1,5 +1,5 @@
 platform "wasm"
-    requires {} { handler : Request -> Response }
+    requires {} { handler : Request a -> Response b }
     exposes []
     packages {
         json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.1.0/xbO9bXdHi7E9ja6upN5EJXpDoYm7lwmJ8VzL7a5zhYE.tar.br",
@@ -8,6 +8,7 @@ platform "wasm"
         json.Core.{ jsonWithOptions },
         Decode.{ DecodeResult, fromBytesPartial },
         Encode.{ toBytes },
+        Http.{Request, Response}
     ]
     provides [handlerForHost]
 
@@ -26,11 +27,4 @@ handlerForHost = \encodedRequest ->
         Err _ ->
             "Invalid request" |> Str.toUtf8
 
-Request : {
-    body : Str,
-}
 
-Response : {
-    body : Str,
-    statusCode : U16,
-}
