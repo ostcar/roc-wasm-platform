@@ -1,13 +1,10 @@
-async function roc_web_platform_run(wasm_filename, input, callback) {
-  let exit_code;
-
+async function load_wasm(file) {
   const importObj = {
     wasi_snapshot_preview1: {
       proc_exit: (code) => {
         if (code !== 0) {
           console.error(`Exited with code ${code}`);
         }
-        exit_code = code;
       },
       fd_write: (x) => {
         console.error(`fd_write not supported: ${x}`);
@@ -20,7 +17,7 @@ async function roc_web_platform_run(wasm_filename, input, callback) {
     },
   };
 
-  const fetchPromise = fetch(wasm_filename);
+  const fetchPromise = fetch(file);
 
   let wasm;
   if (WebAssembly.instantiateStreaming) {
@@ -33,41 +30,43 @@ async function roc_web_platform_run(wasm_filename, input, callback) {
     wasm = await WebAssembly.instantiate(module_bytes, importObj);
   }
 
-  try {
-    // Encode the input message as json
-    const message = new TextEncoder().encode(JSON.stringify(input));
-    
-    // Allocate enough memory in wasm
-    const in_pointer = wasm.instance.exports.allocUint8(message.length);
+  return async function (input, callback) {
+    try {
+      // Encode the input message as json
+      const message = new TextEncoder().encode(JSON.stringify(input));
 
-    // Init the wasm memory
-    const memory_bytes = new Uint8Array(wasm.instance.exports.memory.buffer);
+      // Allocate enough memory in wasm
+      const in_pointer = wasm.instance.exports.allocUint8(message.length);
 
-    // Write the encoded input to the wasm memory
-    memory_bytes.set(message, in_pointer);
-  
-    // Call the roc code
-    const out_pointer = wasm.instance.exports.run_roc(in_pointer, message.length);
-    
-    // Find the end of the roc return value (the first 0 byte)
-    let stop;
-    for (stop = out_pointer; memory_bytes[stop] != 0; stop++) ;
+      // Init the wasm memory
+      const memory_bytes = new Uint8Array(wasm.instance.exports.memory.buffer);
 
-    // Decode the roc value
-    let result = JSON.parse(new TextDecoder().decode(memory_bytes.slice(out_pointer, stop)));
+      // Write the encoded input to the wasm memory
+      memory_bytes.set(message, in_pointer);
 
-    callback(result);
+      // Call the roc code
+      const out_pointer = wasm.instance.exports.run_roc(in_pointer, message.length);
 
-  } catch (e) {
-    const is_ok = e.message === "unreachable" && exit_code === 0;
-    if (!is_ok) {
-      console.error(e);
+      // Find the end of the roc return value (the first 0 byte)
+      let stop;
+      for (stop = out_pointer; memory_bytes[stop] != 0; stop++);
+
+      // Decode the roc value
+      const result = JSON.parse(new TextDecoder().decode(memory_bytes.slice(out_pointer, stop)));
+
+      callback(result);
+
+    } catch (e) {
+      const is_ok = e.message === "unreachable" && exit_code === 0;
+      if (!is_ok) {
+        console.error(e);
+      }
     }
   }
 }
 
 if (typeof module !== "undefined") {
   module.exports = {
-    roc_web_platform_run,
+    load_wasm,
   };
 }
