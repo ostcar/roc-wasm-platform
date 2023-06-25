@@ -33,7 +33,6 @@ export fn roc_dealloc(c_ptr: *anyopaque, alignment: u32) callconv(.C) void {
 }
 
 // NOTE roc_panic has to be provided by the wasm runtime, so it can throw an exception
-extern fn print_roc_string(str_bytes: ?[*]u8, str_len: usize) void;
 
 export fn allocUint8(length: u32) [*]u8 {
     const slice = std.heap.page_allocator.alloc(u8, length) catch
@@ -44,18 +43,18 @@ export fn allocUint8(length: u32) [*]u8 {
 
 const RocList = struct { pointer: [*]u8, length: usize, capacity: usize };
 
-extern fn roc__handlerForHost_1_exposed(*RocList, *RocList) void;
+extern fn roc__mainForHost_1_exposed(*RocList, *RocList) void;
 
-export fn run_roc(input: [*]u8, input_len: usize) [*]const u8 {
-    defer std.heap.page_allocator.free(input[0..input_len]);
+export fn run_roc(pointer: [*]u8, length: usize) [*]const u8 {
+    defer std.heap.page_allocator.free(pointer[0..length]);
 
-    var arg = RocList{ .pointer = input, .length = input_len, .capacity = input_len };
+    var arg = RocList{ .pointer = pointer, .length = length, .capacity = length };
 
     // TODO: What should the pointer be for the empty callresult?
     // Is this on the stack or the heap? Do I have to deallocate?
-    var callresult = RocList{ .pointer = input, .length = 0, .capacity = 0 };
+    var callresult = RocList{ .pointer = pointer, .length = 0, .capacity = 0 };
 
-    roc__handlerForHost_1_exposed(&callresult, &arg);
+    roc__mainForHost_1_exposed(&callresult, &arg);
 
     return callresult.pointer;
 }

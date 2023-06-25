@@ -66,12 +66,11 @@ func run(ctx context.Context) error {
 	return <-wait
 }
 
-func handler(pool *wasmRuntimePool) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func handler(pool *wasmRuntimePool) http.Handler {
+	return handleError(func(w http.ResponseWriter, r *http.Request) error {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error reading body: %v", err), 500)
-			return
+			return fmt.Errorf("reading body: %w", err)
 		}
 		defer r.Body.Close()
 
@@ -83,17 +82,15 @@ func handler(pool *wasmRuntimePool) http.HandlerFunc {
 
 		encodedRequest, err := json.Marshal(wasmRequest)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error encoding data: %v", err), 500)
-			return
+			return fmt.Errorf("encoding data for the wasm runtime: %w", err)
 		}
 
 		runtime := pool.Get()
 
 		encodedResponse, err := runtime.call(r.Context(), encodedRequest)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error: %v", err), 500)
 			pool.Done(runtime)
-			return
+			return fmt.Errorf("call wasm runtime: %w", err)
 		}
 		pool.Done(runtime)
 
@@ -103,12 +100,30 @@ func handler(pool *wasmRuntimePool) http.HandlerFunc {
 		}
 
 		if err := json.Unmarshal(encodedResponse, &wasmResponse); err != nil {
-			http.Error(w, fmt.Sprintf("Error decoding response: %v", err), 500)
-			return
+			return fmt.Errorf("decoding response from wasm runtime: %w", err)
+		}
+
+		if wasmResponse.StatusCode == 0 {
+			return fmt.Errorf("wasm did not set a status code")
 		}
 
 		w.WriteHeader(wasmResponse.StatusCode)
-		w.Write([]byte(wasmResponse.Body))
+		if _, err := w.Write([]byte(wasmResponse.Body)); err != nil {
+			return fmt.Errorf("writing response: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func handleError(f func(http.ResponseWriter, *http.Request) error) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := f(w, r)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error: %v", err), 500)
+			log.Printf("Error: %v", err)
+			return
+		}
 	})
 }
 
@@ -187,7 +202,6 @@ func newWasmRuntime(ctx context.Context, wasm []byte) (*wasmRuntime, func(), err
 	}
 
 	_, err := wazRuntime.NewHostModuleBuilder("env").
-		NewFunctionBuilder().WithFunc(logString).Export("print_roc_string").
 		NewFunctionBuilder().WithFunc(rocPanic).Export("roc_panic").
 		Instantiate(ctx)
 	if err != nil {
@@ -264,15 +278,6 @@ func (r *wasmRuntime) call(ctx context.Context, input []byte) ([]byte, error) {
 	}
 
 	return v, nil
-}
-
-func logString(_ context.Context, m api.Module, offset, byteCount uint32) {
-	buf, ok := m.Memory().Read(offset, byteCount)
-	if !ok {
-		fmt.Printf("Memory.Read(%d, %d) out of range", offset, byteCount)
-		os.Exit(2)
-	}
-	fmt.Print(string(buf))
 }
 
 func rocPanic(_ context.Context, m api.Module, offset, byteCount uint32) {

@@ -1,25 +1,30 @@
-app "wasm"
+platform "wasm"
+    requires {} { main : FromHost a -> ToHost b }
+    exposes []
     packages {
-        pf: "platform/main.roc",
-        # The json import is necessary for the moment: https://github.com/roc-lang/roc/issues/5598
         json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.1.0/xbO9bXdHi7E9ja6upN5EJXpDoYm7lwmJ8VzL7a5zhYE.tar.br",
     }
     imports [
-        pf.Http,
+        json.Core.{ jsonWithOptions },
+        Decode.{ DecodeResult, fromBytesPartial },
+        Encode.{ toBytes },
+        Arg.{FromHost, ToHost}
     ]
-    provides [handler] to pf
+    provides [mainForHost]
 
-MyRequest : {
-    body : Str,
-}
+mainForHost : List U8 -> List U8
+mainForHost = \encodedArg ->
+    decoded =
+        encodedArg
+        |> fromBytesPartial (jsonWithOptions { fieldNameMapping: SnakeCase })
 
-MyResponse : {
-    body : Str,
-    statusCode : U16,
-}
+    when decoded.result is
+        Ok arg ->
+            main arg
+            |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
+            |> List.append 0
 
-handler : Http.Request MyRequest -> Http.Response MyResponse
-handler = \request -> {
-    body: "hello from roc: \(request.body)",
-    statusCode: 200,
-}
+        Err _ ->
+            "Invalid argument" 
+            |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
+            |> List.append 0

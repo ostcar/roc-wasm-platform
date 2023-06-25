@@ -1,4 +1,4 @@
-module github.com/ostcar/goroc
+module github.com/ostcar/goroc/examples/webserver
 
 go 1.20
 

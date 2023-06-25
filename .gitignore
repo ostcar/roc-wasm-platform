@@ -2,4 +2,4 @@ zig-cache
 *.bc
 *.o
 *.wasm
-/goroc
+/examples/webserver/webserver
