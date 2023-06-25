@@ -68,6 +68,11 @@ find  ~/.cache/roc/ -name zig-cache -exec rm -r {} \;
 
 #### 0.10.1
 
+To use zig 0.10.1, there are two small required changes to the roc sourcecode:
+
+https://github.com/roc-lang/roc/compare/main...ostcar:zig_0.10
+
+
 The roc compiler uses zig 0.9.1. So the buildin object files where created with
 this version.
 
@@ -83,4 +88,3 @@ It seems, that they can be ignored.
 ## TODO
 
 * Bundle the platform and use it in the examples
-* Show the necessary changes in the roc compiler to use zig 0.10.1
