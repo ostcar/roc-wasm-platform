@@ -5,3 +5,7 @@ tasks:
     dir: "test"
     cmds:
       - go test
+
+  clear-cache:
+    cmds:
+      - rm -r src/zig-cache

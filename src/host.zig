@@ -48,7 +48,8 @@ export fn allocUint8(length: u32) [*]u8 {
 
 const RocList = struct { pointer: [*]u8, length: usize, capacity: usize };
 
-extern fn roc__mainForHost_1_exposed(*RocList, *RocList) void;
+extern fn roc__mainForHost_1_exposed(callback: [*]u8, argument: *RocList) void;
+extern fn roc__mainForHost_0_caller(argument: *RocList, callback: [*]u8, return_value: *RocList) void;
 
 // run_roc uses the webassembly memory at the given pointer to call roc.
 //
@@ -57,9 +58,12 @@ export fn run_roc(pointer: [*]u8, length: usize) [*]const u8 {
     defer std.heap.page_allocator.free(pointer[0..length]);
 
     const arg = &RocList{ .pointer = pointer, .length = length, .capacity = length };
-    var callresult: RocList = undefined;
 
-    roc__mainForHost_1_exposed(&callresult, arg);
+    const callback: [*]u8 = undefined;
+    roc__mainForHost_1_exposed(callback, arg);
+
+    var callresult: RocList = undefined;
+    roc__mainForHost_0_caller(arg, callback, &callresult);
 
     // TODO: deallocate callresult
     return callresult.pointer;
