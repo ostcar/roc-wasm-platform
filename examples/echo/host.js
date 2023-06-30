@@ -52,10 +52,11 @@ async function load_wasm(file) {
       console.log(callback_pointer);
       console.log(memory_bytes);
       const out_pointer = wasm.instance.exports.callback(callback_pointer, in_pointer2, message2.length);
+      //const out_pointer = callback_pointer;
 
       // Find the end of the roc return value (the first 0 byte)
       let stop;
-      for (stop = out_pointer; memory_bytes[stop] != 0; stop++);
+      for (stop = out_pointer; memory_bytes[stop] != 0 && stop < out_pointer + 1000; stop++);
 
       // Decode the roc value
       const result = JSON.parse(new TextDecoder().decode(memory_bytes.slice(out_pointer, stop)));

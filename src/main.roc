@@ -1,5 +1,5 @@
 platform "wasm"
-    requires {} { main : a -> (b -> c) | a has Decoding, b has Decoding, c has Encoding }
+    requires {} { main : Str -> (b -> c) | b has Decoding, c has Encoding }
     exposes []
     packages {
         json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.1.0/xbO9bXdHi7E9ja6upN5EJXpDoYm7lwmJ8VzL7a5zhYE.tar.br",
@@ -11,11 +11,11 @@ platform "wasm"
     ]
     provides [mainForHost]
 
-# TODO: Make callback (List U8 -> Job) and make Job a enum where one option is just value
+# # TODO: Make callback (List U8 -> Job) and make Job a enum where one option is just value
 # Job : {
+#     name: List U8,
+#     value: List U8,
 #     callback: (List U8 -> List U8),
-#     #name: List U8,
-#     #value: List U8,
 # }
 
 Job : List U8 -> List U8
@@ -33,9 +33,9 @@ mainForHost = \encodedArg ->
                     
         Err _ ->
             # {
-            #     callback: \_ -> [],
-            #     #name: "Error" |> Str.toUtf8,
-            #     #value:  "Invalid argument" |> toJson
+            #     name: "Error" |> Str.toUtf8,
+            #     value:  "Invalid argument" |> toJson,
+            #     callback: (\_ -> []) ,
             # }
             \_ -> "Invalid first argument" |> toJson
 
@@ -58,10 +58,10 @@ convertCallback = \mainCallback ->
                 |> toJson
 
     # {
-    #     callback: convertedFn,
-    #     #name: Str.toUtf8 "DoSomething",
-    #     #value: [],
-    # }
+    #     name: "AAAAAaa" |> toJson,
+    #     value: "BBBBB" |> toJson,
+    #     callback: convertedFn ,
+    # } 
     convertedFn
 
 
