@@ -1,5 +1,5 @@
 platform "wasm"
-    requires {} { main : FromHost a -> ToHost b }
+    requires {} { main : a -> b | a has Decoding, b has Encoding }
     exposes []
     packages {
         json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.1.0/xbO9bXdHi7E9ja6upN5EJXpDoYm7lwmJ8VzL7a5zhYE.tar.br",
@@ -8,7 +8,6 @@ platform "wasm"
         json.Core.{ jsonWithOptions },
         Decode.{ DecodeResult, fromBytesPartial },
         Encode.{ toBytes },
-        Arg.{FromHost, ToHost}
     ]
     provides [mainForHost]
 
