@@ -34,6 +34,11 @@ export fn roc_dealloc(c_ptr: *anyopaque, alignment: u32) callconv(.C) void {
 
 // NOTE roc_panic has to be provided by the wasm runtime, so it can throw an exception
 
+// allocUint8 has to be called before run_roc to get some memory in the
+// webassembly module.
+//
+// It returns a pointer, that then can be used by run_roc. The length to
+// allocUint8() and run_roc() have to be the same.
 export fn allocUint8(length: u32) [*]u8 {
     const slice = std.heap.page_allocator.alloc(u8, length) catch
         @panic("failed to allocate memory");
@@ -45,17 +50,18 @@ const RocList = struct { pointer: [*]u8, length: usize, capacity: usize };
 
 extern fn roc__mainForHost_1_exposed(*RocList, *RocList) void;
 
+// run_roc uses the webassembly memory at the given pointer to call roc.
+//
+// It retuns a new pointer to the data returned by roc.
 export fn run_roc(pointer: [*]u8, length: usize) [*]const u8 {
     defer std.heap.page_allocator.free(pointer[0..length]);
 
-    var arg = RocList{ .pointer = pointer, .length = length, .capacity = length };
+    const arg = &RocList{ .pointer = pointer, .length = length, .capacity = length };
+    var callresult: RocList = undefined;
 
-    // TODO: What should the pointer be for the empty callresult?
-    // Is this on the stack or the heap? Do I have to deallocate?
-    var callresult = RocList{ .pointer = pointer, .length = 0, .capacity = 0 };
+    roc__mainForHost_1_exposed(&callresult, arg);
 
-    roc__mainForHost_1_exposed(&callresult, &arg);
-
+    // TODO: deallocate callresult
     return callresult.pointer;
 }
 
