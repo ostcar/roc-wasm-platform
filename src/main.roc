@@ -11,11 +11,11 @@ platform "wasm"
     ]
     provides [mainForHost]
 
-# # TODO: Make callback (List U8 -> Job) and make Job a enum where one option is just value
+# TODO: Make callback (List U8 -> Job) and make Job a enum where one option is just value
 # Job : {
 #     callback: (List U8 -> List U8),
-#     name: List U8,
-#     value: List U8,
+#     #name: List U8,
+#     #value: List U8,
 # }
 
 Job : List U8 -> List U8
@@ -29,23 +29,19 @@ mainForHost = \encodedArg ->
     when decoded.result is
         Ok arg ->
             main arg
-            |> callback
+            |> convertCallback
                     
         Err _ ->
             # {
             #     callback: \_ -> [],
-            #     name: "Error" |>Str.toUtf8,
-            #     value:             
-            #         "Invalid argument" 
-            #         |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
-            #         |> List.append 0,
+            #     #name: "Error" |> Str.toUtf8,
+            #     #value:  "Invalid argument" |> toJson
             # }
-            rawArgument = Str.fromUtf8 encodedArg|> Result.withDefault "Can not decode"
-            \_ -> "Invalid first argument:  --\(rawArgument)--" |> toJson
+            \_ -> "Invalid first argument" |> toJson
 
 
-callback : (b -> c) -> Job | b has Decoding, c has Encoding
-callback = \mainCallback ->
+convertCallback : (b -> c) -> Job | b has Decoding, c has Encoding
+convertCallback = \mainCallback ->
     convertedFn : List U8 -> List U8
     convertedFn = \encodedArg ->
         decoded = 
@@ -63,8 +59,8 @@ callback = \mainCallback ->
 
     # {
     #     callback: convertedFn,
-    #     name: Str.toUtf8 "DoSomething",
-    #     value: [],
+    #     #name: Str.toUtf8 "DoSomething",
+    #     #value: [],
     # }
     convertedFn
 

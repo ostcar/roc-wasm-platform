@@ -47,7 +47,7 @@ export fn allocUint8(length: u32) [*]u8 {
 }
 
 const RocList = struct { pointer: [*]u8, length: usize, capacity: usize };
-//const Job = struct { callback: [*]u8, name: RocList, value: RocList };
+//const Job = struct { callback: [*]u8 };
 
 extern fn roc__mainForHost_1_exposed(job: [*]u8, argument: *RocList) void;
 extern fn roc__mainForHost_0_caller(argument: *RocList, callback: [*]u8, return_value: *RocList) void;
@@ -63,7 +63,6 @@ export fn run_roc(pointer: [*]u8, length: usize) [*]const u8 {
     var job: [*]u8 = undefined;
     roc__mainForHost_1_exposed(job, arg);
 
-    //return job.callback;
     return job;
 }
 

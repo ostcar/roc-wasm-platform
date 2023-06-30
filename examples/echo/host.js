@@ -49,6 +49,8 @@ async function load_wasm(file) {
 
       // Call the roc code
       const callback_pointer = wasm.instance.exports.run_roc(in_pointer1, message1.length);
+      console.log(callback_pointer);
+      console.log(memory_bytes);
       const out_pointer = wasm.instance.exports.callback(callback_pointer, in_pointer2, message2.length);
 
       // Find the end of the roc return value (the first 0 byte)
