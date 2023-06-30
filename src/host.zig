@@ -47,8 +47,9 @@ export fn allocUint8(length: u32) [*]u8 {
 }
 
 const RocList = struct { pointer: [*]u8, length: usize, capacity: usize };
+//const Job = struct { callback: [*]u8, name: RocList, value: RocList };
 
-extern fn roc__mainForHost_1_exposed(callback_pointer: [*]u8, argument: *RocList) void;
+extern fn roc__mainForHost_1_exposed(job: [*]u8, argument: *RocList) void;
 extern fn roc__mainForHost_0_caller(argument: *RocList, callback: [*]u8, return_value: *RocList) void;
 
 // run_roc uses the webassembly memory at the given pointer to call roc.
@@ -59,10 +60,11 @@ export fn run_roc(pointer: [*]u8, length: usize) [*]const u8 {
 
     const arg = &RocList{ .pointer = pointer, .length = length, .capacity = length };
 
-    var callback_pointer: [*]u8 = undefined;
-    roc__mainForHost_1_exposed(callback_pointer, arg);
+    var job: [*]u8 = undefined;
+    roc__mainForHost_1_exposed(job, arg);
 
-    return callback_pointer;
+    //return job.callback;
+    return job;
 }
 
 export fn callback(callback_pointer: [*]u8, argument_pointer: [*]u8, argument_length: usize) [*]const u8 {

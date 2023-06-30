@@ -10,7 +10,7 @@ app "echo"
 
 
 main : Str -> (Str -> Str)
-main = \arg -> \s -> "arg: \(arg), s: \(s)"
+main = \arg1 -> \arg2 -> "arg1: \(arg1), arg2: \(arg2)"
 
 
 # # From: https://github.com/roc-lang/roc/blob/main/examples/cli/echo.roc

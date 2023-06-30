@@ -11,7 +11,16 @@ platform "wasm"
     ]
     provides [mainForHost]
 
-mainForHost : List U8 -> (List U8 -> List U8)
+# # TODO: Make callback (List U8 -> Job) and make Job a enum where one option is just value
+# Job : {
+#     callback: (List U8 -> List U8),
+#     name: List U8,
+#     value: List U8,
+# }
+
+Job : List U8 -> List U8
+
+mainForHost : List U8 -> Job
 mainForHost = \encodedArg ->
     decoded =
         encodedArg
@@ -19,25 +28,49 @@ mainForHost = \encodedArg ->
 
     when decoded.result is
         Ok arg ->
-            fnS = main arg
-            
-            \s ->
-                decodedS = fromBytesPartial s (jsonWithOptions { fieldNameMapping: SnakeCase })
-                when decodedS.result is
-                    Ok argS ->
-                        fnS argS
-                        |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
-                        |> List.append 0
+            main arg
+            |> callback
                     
-                    Err _ ->
-                        "Invalid second argument" 
-                        |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
-                        |> List.append 0
-
-                
-
         Err _ ->
-            \_ -> 
-                "Invalid argument" 
-                |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
-                |> List.append 0
+            # {
+            #     callback: \_ -> [],
+            #     name: "Error" |>Str.toUtf8,
+            #     value:             
+            #         "Invalid argument" 
+            #         |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
+            #         |> List.append 0,
+            # }
+            rawArgument = Str.fromUtf8 encodedArg|> Result.withDefault "Can not decode"
+            \_ -> "Invalid first argument:  --\(rawArgument)--" |> toJson
+
+
+callback : (b -> c) -> Job | b has Decoding, c has Encoding
+callback = \mainCallback ->
+    convertedFn : List U8 -> List U8
+    convertedFn = \encodedArg ->
+        decoded = 
+            encodedArg
+            |> fromBytesPartial (jsonWithOptions { fieldNameMapping: SnakeCase })
+
+        when decoded.result is
+            Ok arg ->
+                mainCallback arg
+                |> toJson
+            
+            Err _ ->
+                "Invalid second argument" 
+                |> toJson
+
+    # {
+    #     callback: convertedFn,
+    #     name: Str.toUtf8 "DoSomething",
+    #     value: [],
+    # }
+    convertedFn
+
+
+toJson : a -> List U8 | a has Encoding
+toJson = \value -> 
+        value
+        |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
+        |> List.append 0
