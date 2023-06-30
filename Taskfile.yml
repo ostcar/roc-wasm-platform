@@ -1,0 +1,7 @@
+version: '3'
+
+tasks:
+  test:
+    dir: "test"
+    cmds:
+      - go test
