@@ -68,8 +68,8 @@ async function load_wasm(wasm_file) {
       // Call the roc code
       const pointer_from_run_roc = run_roc(message1.pointer, message1.length);
       const job = decodeJob(memory, pointer_from_run_roc);
-      console.log(job.name);
-      console.log(job.value);
+      //console.log(job.name);
+      //console.log(job.value);
 
       // Call the roc callback
       const pointer_from_callback = run_callback(job.callback, message2.pointer, message2.length);

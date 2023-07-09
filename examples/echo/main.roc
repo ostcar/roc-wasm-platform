@@ -8,11 +8,8 @@ app "echo"
     imports []
     provides [main] to pf
 
-
 main : Str -> (Str -> Str)
 main = \arg1 -> \arg2 -> "arg1: \(arg1), arg2: \(arg2)"
-
-
 
 # # From: https://github.com/roc-lang/roc/blob/main/examples/cli/echo.roc
 # echo : Str -> Str

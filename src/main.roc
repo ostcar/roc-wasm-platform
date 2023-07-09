@@ -11,11 +11,21 @@ platform "wasm"
     ]
     provides [mainForHost]
 
-# TODO: Make callback (List U8 -> Job) and make Job a enum where one option is just value
+# TODO: Use this kind of Job, but I don't know how to handle tag unions in zig
+# Job : [
+#     Continue
+#         {
+#             name : List U8,
+#             value : List U8,
+#             callback : List U8 -> Job,
+#         },
+#     Finished (List U8),
+# ]
+
 Job : {
-    name: List U8,
-    value: List U8,
-    callback: List U8 -> List U8,
+    name : List U8,
+    value : List U8,
+    callback : List U8 -> List U8,
 }
 
 mainForHost : List U8 -> Job
@@ -28,20 +38,19 @@ mainForHost = \encodedArg ->
         Ok arg ->
             main arg
             |> convertCallback
-                    
+
         Err _ ->
             {
                 name: "Invalid argument" |> toJson,
-                value:  "Invalid argument" |> toJson,
-                callback: (\_ -> []) ,
+                value: "Invalid argument" |> toJson,
+                callback: \_ -> [],
             }
-
 
 convertCallback : (b -> c) -> Job | b has Decoding, c has Encoding
 convertCallback = \mainCallback ->
     convertedFn : List U8 -> List U8
     convertedFn = \encodedArg ->
-        decoded = 
+        decoded =
             encodedArg
             |> fromBytesPartial (jsonWithOptions { fieldNameMapping: SnakeCase })
 
@@ -49,20 +58,19 @@ convertCallback = \mainCallback ->
             Ok arg ->
                 mainCallback arg
                 |> toJson
-            
+
             Err _ ->
-                "Invalid second argument" 
+                "Invalid second argument"
                 |> toJson
 
     {
         name: "name from roc" |> toJson,
         value: "value from roc" |> toJson,
-        callback: convertedFn ,
-    } 
-
+        callback: convertedFn,
+    }
 
 toJson : a -> List U8 | a has Encoding
-toJson = \value -> 
-        value
-        |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
-        |> List.append 0
+toJson = \value ->
+    value
+    |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
+    |> List.append 0

@@ -47,13 +47,13 @@ export fn allocUint8(length: u32) [*]u8 {
     return slice.ptr;
 }
 
-const RocJob = extern struct { placeholder_I_dont_understand: u128, name: RocList, value: RocList };
 const RocList = extern struct { pointer: [*]u8, length: usize, capacity: usize };
+const RocJob = extern struct { placeholder_I_dont_understand: u128, name: RocList, value: RocList };
 
 extern fn roc__mainForHost_1_exposed_generic(result: *RocJob, argument: *RocList) void;
 extern fn roc__mainForHost_1_exposed_size() i64;
 extern fn roc__mainForHost_0_caller(arg: *RocList, callback_pointer: [*]u8, result: *RocList) void;
-extern fn roc__mainForHost_0_result_size() i64;
+extern fn roc__mainForHost_0_size() i64;
 
 const ExternJob = extern struct { callback: *RocJob, name: [*]u8, value: [*]u8 };
 
@@ -86,7 +86,7 @@ export fn run_callback(callback_pointer: [*]u8, argument_pointer: [*]u8, argumen
 
     const arg = &RocList{ .pointer = argument_pointer, .length = argument_length, .capacity = argument_length };
 
-    const return_size = @intCast(u32, roc__mainForHost_1_exposed_size());
+    const return_size = @intCast(u32, roc__mainForHost_0_size());
     // TODO: This has to be deallocated
     const raw_output = roc_alloc(@intCast(usize, return_size), @alignOf(u64)).?;
     var roc_result = @ptrCast(*RocList, @alignCast(@alignOf(RocList), raw_output));
