@@ -10,8 +10,6 @@ function decodeZeroTerminatedString(memory, pointer) {
   return JSON.parse(decoded);
 }
 
-
-
 function decodeJob(memory, jobPointer) {
   try {
     const jobSlice = new Uint32Array(memory.buffer, jobPointer,2);
@@ -26,8 +24,17 @@ function decodeJob(memory, jobPointer) {
   }
 }
 
-async function load_wasm(file) {
+function send_string(memory, allocater, str) {
+  const message = new TextEncoder().encode(JSON.stringify(str));
+  const pointer = allocater(message.length);
+  const slice = new Uint8Array(memory.buffer, pointer,message.length);
+  slice.set(message);
+  return {pointer: pointer, length: message.length};
+}
+
+async function load_wasm(wasm_file) {
   const importObj = {
+    // TODO: Why do I have to define this?
     wasi_snapshot_preview1: {
       proc_exit: (code) => {
         if (code !== 0) {
@@ -45,43 +52,26 @@ async function load_wasm(file) {
     },
   };
 
+  const  wasm = await WebAssembly.instantiateStreaming(fetch(wasm_file), importObj);
+  
+  const memory = wasm.instance.exports.memory;
+  const allocater = wasm.instance.exports.allocUint8;
+  const run_roc = wasm.instance.exports.run_roc;
+  const run_callback = wasm.instance.exports.run_callback;
 
-  const  wasm = await WebAssembly.instantiateStreaming(fetch(file), importObj);
-
-
-  return function (input1, input2, callback) {
+  return function (input1, input2) {
     try {
-      // Encode the input message as json
-      const message1 = new TextEncoder().encode(JSON.stringify(input1));
-      const message2 = new TextEncoder().encode(JSON.stringify(input2));
-
-      // Allocate enough memory in wasm
-      const in_pointer1 = wasm.instance.exports.allocUint8(message1.length);
-      const in_pointer2 = wasm.instance.exports.allocUint8(message2.length);
-
-      //const test_value = wasm.instance.exports.test_fn();
-
-      // Init the wasm memory
-      const memory = new Uint8Array(wasm.instance.exports.memory.buffer);
-
-      // Write the encoded input to the wasm memory
-      memory.set(message1, in_pointer1);
-      memory.set(message2, in_pointer2);
-
-
+      const message1 = send_string(memory, allocater, input1)
+      const message2 = send_string(memory, allocater, input2)
 
       // Call the roc code
-      const job_pointer = wasm.instance.exports.run_roc(in_pointer1, message1.length);
-      const job = decodeJob(wasm.instance.exports.memory, job_pointer);
-      console.log(job_pointer);
-      console.log(job.callback);
-      console.log(memory)
-      console.log(job.value);
+      const pointer_from_run_roc = run_roc(message1.pointer, message1.length);
+      const job = decodeJob(memory, pointer_from_run_roc);
 
-      const out_pointer = wasm.instance.exports.run_callback(job.callback, in_pointer2, message2.length);
-      //const out_pointer = wasm.instance.exports.run_callback(job.callback, in_pointer2, message2.length);
+      // Call the roc callback
+      const pointer_from_callback = run_callback(job.callback, message2.pointer, message2.length);
 
-      const result = decodeZeroTerminatedString(wasm.instance.exports.memory, out_pointer);
+      const result = decodeZeroTerminatedString(memory, pointer_from_callback);
 
       return result;
 
