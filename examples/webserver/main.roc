@@ -5,20 +5,26 @@ app "wasm"
         # The json import is necessary for the moment: https://github.com/roc-lang/roc/issues/5598
         json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.1.0/xbO9bXdHi7E9ja6upN5EJXpDoYm7lwmJ8VzL7a5zhYE.tar.br",
     }
-    imports []
+    imports [
+        pf.Task.{Task},
+    ]
     provides [main] to pf
 
 Request : {
     body : Str,
 }
 
-Response : {
-    body : Str,
-    statusCode : U16,
-}
 
-main : Request -> Response
-main = \request -> {
-    body: "hello from roc: \(request.body)",
-    statusCode: 200,
-}
+main = \request -> 
+    {} <- write_status 200 |> Task.await
+    "echo \(request.body)"
+    |> Str.toUtf8
+    |> write_content
+
+writeStatusCode : Int -> Task {} DecodeError
+writeStatusCode = \code ->
+    Task.doSomething "write_status" code
+
+writeContent : List U8 -> Task {} DecodeError
+writeContent = \bytes ->
+    Task.doSomething "write_content" bytes

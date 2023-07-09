@@ -43,7 +43,7 @@ async function load_wasm(wasm_file) {
   
       case "read_str":
         const value = read_str_callback();
-        const send_data = send_string(memory,allocater,value);
+        const send_data = send_string(memory, allocater, value);
         const out_slice = new Uint32Array(memory.buffer, output_pointer, 3);
         out_slice[0] = send_data.pointer;
         out_slice[1] = send_data.length;
@@ -84,17 +84,18 @@ async function load_wasm(wasm_file) {
   allocater = wasm.instance.exports.allocUint8;
   const run_roc = wasm.instance.exports.run_roc;
 
-  return function (input1, input2, print_str, read_str) {
+  return function (input, print_str, read_str) {
     try {
       print_str_callback = print_str;
       read_str_callback = read_str;
 
-      const message1 = send_string(memory, allocater, input1)
-      const message2 = send_string(memory, allocater, input2)
+      const message = send_string(memory, allocater, input)
 
       // Call the roc code
-      run_roc(message1.pointer, message1.length);
-      return;
+      const result_pointer = run_roc(message.pointer, message.length);
+      const result_message = decodeZeroTerminatedString(memory, result_pointer);
+      console.log(result_message)
+      return result_message;
 
     } catch (e) {
       const is_ok = e.message === "unreachable" && exit_code === 0;

@@ -7,19 +7,27 @@ app "echo"
         json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.1.0/xbO9bXdHi7E9ja6upN5EJXpDoYm7lwmJ8VzL7a5zhYE.tar.br",
     }
     imports [
-        pf.Task.{Task},
+        pf.Task.{ Task, LastTask },
     ]
     provides [main] to pf
 
+main : Str -> LastTask Str
+main = \argument ->
+    (
+        input <- readStr |> Task.await
+        printStr "argument: \(argument), read input: \(input)"
+    )
+    |> Task.finish \result ->
+        when result is
+            Ok _ -> "Roc is done"
+            Err err -> "Something is wrong :( \(err)"
 
-main = \arg1 ->
-    Task.await readStr \text ->
-        printStr "start arg: \(arg1), read arg: \(text)"
-
-printStr : Str -> Task {} DecodeError
+printStr : Str -> Task {} Str
 printStr = \str ->
     Task.doSomething "print_str" str
+    |> Task.mapErr \_ -> "Error printStr"
 
-readStr : Task Str DecodeError
+readStr : Task Str Str
 readStr =
     Task.doSomething "read_str" {}
+    |> Task.mapErr \_ -> "Error readStr"

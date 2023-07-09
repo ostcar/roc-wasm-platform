@@ -64,13 +64,13 @@ const RocList = extern struct { pointer: [*]u8, length: usize, capacity: usize }
 extern fn roc__mainForHost_1_exposed_generic([*]u8, *RocList) void;
 extern fn roc__mainForHost_0_result_size() i64;
 extern fn roc__mainForHost_1_exposed_size() i64;
-extern fn roc__mainForHost_0_caller(*const u8, [*]u8, [*]u8) void;
+extern fn roc__mainForHost_0_caller(*const u8, [*]u8, *RocList) void;
 extern fn roc__mainForHost_0_size() i64;
 
 // run_roc uses the webassembly memory at the given pointer to call roc.
 //
 // It retuns a new pointer to the data returned by roc.
-export fn run_roc(argument_pointer: [*]u8, length: usize) void {
+export fn run_roc(argument_pointer: [*]u8, length: usize) [*]u8 {
     defer std.heap.page_allocator.free(argument_pointer[0..length]);
 
     const arg = &RocList{ .pointer = argument_pointer, .length = length, .capacity = length };
@@ -88,28 +88,28 @@ export fn run_roc(argument_pointer: [*]u8, length: usize) void {
 
     const closure_data_pointer = @ptrCast([*]u8, output);
 
-    call_the_closure(closure_data_pointer);
-
-    return;
+    return call_the_closure(closure_data_pointer);
 }
 
 // From: crates/cli_testing_examples/benchmarks/platform/host.zig
-fn call_the_closure(closure_data_pointer: [*]u8) void {
+fn call_the_closure(closure_data_pointer: [*]u8) [*]u8 {
     // The size might be zero; if so, make it at least 8 so that we don't have a nullptr
     const size = std.math.max(roc__mainForHost_0_result_size(), 8);
-    const raw_output = allocator.allocAdvanced(u8, @alignOf(u64), @intCast(usize, size), .at_least) catch unreachable;
-    var output = @ptrCast([*]u8, raw_output);
 
-    defer {
-        allocator.free(raw_output);
-    }
+    // TODO: Deallocate
+    const raw_output = allocator.allocAdvanced(u8, @alignOf(u64), @intCast(usize, size), .at_least) catch unreachable;
+    var output = @ptrCast(*RocList, raw_output);
+
+    // defer {
+    //     allocator.free(raw_output);
+    // }
 
     const flags: u8 = 0;
 
     roc__mainForHost_0_caller(&flags, closure_data_pointer, output);
 
     // The closure returns result, nothing interesting to do with it
-    return;
+    return output.pointer;
 }
 
 pub fn main() u8 {
