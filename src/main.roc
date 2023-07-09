@@ -13,6 +13,7 @@ platform "wasm"
 
 # TODO: Make callback (List U8 -> Job) and make Job a enum where one option is just value
 Job : {
+    name: List U8,
     value: List U8,
     callback: List U8 -> List U8,
 }
@@ -30,10 +31,10 @@ mainForHost = \encodedArg ->
                     
         Err _ ->
             {
+                name: "Invalid argument" |> toJson,
                 value:  "Invalid argument" |> toJson,
                 callback: (\_ -> []) ,
             }
-            # \_ -> "Invalid first argument" |> toJson
 
 
 convertCallback : (b -> c) -> Job | b has Decoding, c has Encoding
@@ -54,10 +55,10 @@ convertCallback = \mainCallback ->
                 |> toJson
 
     {
-        value: "AAAAvalue from roc" |> toJson,
+        name: "name from roc" |> toJson,
+        value: "value from roc" |> toJson,
         callback: convertedFn ,
     } 
-    # convertedFn
 
 
 toJson : a -> List U8 | a has Encoding

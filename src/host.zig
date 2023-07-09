@@ -47,7 +47,7 @@ export fn allocUint8(length: u32) [*]u8 {
     return slice.ptr;
 }
 
-const RocJob = extern struct { placeholder_I_dont_understand: u128, value: RocList };
+const RocJob = extern struct { placeholder_I_dont_understand: u128, name: RocList, value: RocList };
 const RocList = extern struct { pointer: [*]u8, length: usize, capacity: usize };
 
 extern fn roc__mainForHost_1_exposed_generic(result: *RocJob, argument: *RocList) void;
@@ -55,7 +55,7 @@ extern fn roc__mainForHost_1_exposed_size() i64;
 extern fn roc__mainForHost_0_caller(arg: *RocList, callback_pointer: [*]u8, result: *RocList) void;
 extern fn roc__mainForHost_0_result_size() i64;
 
-const ExternJob = extern struct { callback: *RocJob, value: [*]u8 };
+const ExternJob = extern struct { callback: *RocJob, name: [*]u8, value: [*]u8 };
 
 // run_roc uses the webassembly memory at the given pointer to call roc.
 //
@@ -76,6 +76,7 @@ export fn run_roc(argument_pointer: [*]u8, length: usize) [*]u8 {
         @panic("failed to allocate result type");
 
     job.callback = roc_result;
+    job.name = roc_result.name.pointer;
     job.value = roc_result.value.pointer;
     return @ptrCast([*]u8, job);
 }

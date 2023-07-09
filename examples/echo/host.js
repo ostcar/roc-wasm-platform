@@ -12,11 +12,12 @@ function decodeZeroTerminatedString(memory, pointer) {
 
 function decodeJob(memory, jobPointer) {
   try {
-    const jobSlice = new Uint32Array(memory.buffer, jobPointer,2);
+    const jobSlice = new Uint32Array(memory.buffer, jobPointer,3);
 
     return {
       callback: jobSlice[0], 
-      value: decodeZeroTerminatedString(memory,jobSlice[1]),
+      name: decodeZeroTerminatedString(memory, jobSlice[1]),
+      value: decodeZeroTerminatedString(memory, jobSlice[2]),
     };
 
   } finally {
@@ -67,6 +68,8 @@ async function load_wasm(wasm_file) {
       // Call the roc code
       const pointer_from_run_roc = run_roc(message1.pointer, message1.length);
       const job = decodeJob(memory, pointer_from_run_roc);
+      console.log(job.name);
+      console.log(job.value);
 
       // Call the roc callback
       const pointer_from_callback = run_callback(job.callback, message2.pointer, message2.length);
