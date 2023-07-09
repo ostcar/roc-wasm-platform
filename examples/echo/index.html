@@ -11,10 +11,15 @@
       const output = document.getElementById("output");
 
       load_wasm("./echo.wasm").then((run_roc) => {
+        function print(str) {
+          output.textContent = str;
+        }
+        function read() {
+          return input2.value;
+        }
+
         function eventFn() {
-          run_roc(input1.value, input2.value, (str) =>{
-            output.textContent = str;
-          });
+          run_roc(input1.value, input2.value, print, read);
         }
 
         both_inputs.forEach(el => el.addEventListener('input', eventFn));

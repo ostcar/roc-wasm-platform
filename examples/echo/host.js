@@ -18,26 +18,42 @@ function send_string(memory, allocater, str) {
   return {pointer: pointer, length: message.length};
 }
 
-function do_effect(print, memory, name_pointer, name2_pointer, argument_pointer) {
-  const name_slice = new Uint32Array(memory.buffer, name_pointer, 3);
-  const name = decodeZeroTerminatedString(memory, name_slice[0]);
-
-  const argument_slice = new Uint32Array(memory.buffer, argument_pointer, 3);
-  const argument = decodeZeroTerminatedString(memory, argument_slice[0]);
-
-  switch (name) {
-    case "print_str":
-      console.log("Printing: ", argument);
-      print(argument);
-      break
-    default:
-      console.log("unknown Effect: ", name)
-  }
+function print_memory(memory) {
+  console.log(new Uint8Array(memory.buffer))
 }
+
 
 async function load_wasm(wasm_file) {
   let memory = undefined;
-  let out_callback = undefined;
+  let allocater = undefined;
+  let print_str_callback = undefined;
+  let read_str_callback = undefined;
+
+  function do_effect(output_pointer, name_pointer,  arg_pointer) {
+    const name_slice = new Uint32Array(memory.buffer, name_pointer, 3);
+    const name = decodeZeroTerminatedString(memory, name_slice[0]);
+  
+    switch (name) {
+      case "print_str":
+        const argument_slice = new Uint32Array(memory.buffer, arg_pointer, 3);
+        const argument = decodeZeroTerminatedString(memory, argument_slice[0]);
+  
+        print_str_callback(argument);
+        break
+  
+      case "read_str":
+        const value = read_str_callback();
+        const send_data = send_string(memory,allocater,value);
+        const out_slice = new Uint32Array(memory.buffer, output_pointer, 3);
+        out_slice[0] = send_data.pointer;
+        out_slice[1] = send_data.length;
+        out_slice[2] = send_data.length;
+        break
+  
+      default:
+        console.log("unknown Effect: ", name)
+    }
+  }
 
   const importObj = {
     // TODO: Why do I have to define this?
@@ -56,7 +72,7 @@ async function load_wasm(wasm_file) {
         throw "Roc panicked!";
       },
       roc_fx_doEffect: (name, name2, argument) => {
-        return do_effect(out_callback, memory, name, name2, argument);
+        return do_effect(name, name2, argument);
       }
     },
   };
@@ -64,13 +80,14 @@ async function load_wasm(wasm_file) {
   const  wasm = await WebAssembly.instantiateStreaming(fetch(wasm_file), importObj);
   
   memory = wasm.instance.exports.memory;
-  const allocater = wasm.instance.exports.allocUint8;
+  allocater = wasm.instance.exports.allocUint8;
   const run_roc = wasm.instance.exports.run_roc;
-  const run_callback = wasm.instance.exports.run_callback;
 
-  return function (input1, input2, callback) {
+  return function (input1, input2, print_str, read_str) {
     try {
-      out_callback = callback;
+      print_str_callback = print_str;
+      read_str_callback = read_str;
+
       const message1 = send_string(memory, allocater, input1)
       const message2 = send_string(memory, allocater, input2)
 
@@ -83,9 +100,10 @@ async function load_wasm(wasm_file) {
       if (!is_ok) {
         console.error(e);
       }
-      
+
     } finally {
-      out_callback = undefined;
+      print_str_callback = undefined;
+      read_str_callback = undefined;
     }
   }
 }

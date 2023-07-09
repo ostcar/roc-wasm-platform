@@ -11,4 +11,4 @@ hosted Effect
     imports []
     generates Effect with [after, map, always, forever, loop]
 
-doEffect : Box (List U8), Box (List U8) -> Effect (Box (List U8))
+doEffect : Box (List U8), Box (List U8) -> Effect (List U8)

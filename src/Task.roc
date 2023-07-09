@@ -6,6 +6,7 @@ interface Task
         ok, 
         err,
         doSomething,
+        await,
     ]
     imports [
         json.Core.{ jsonWithOptions },
@@ -32,7 +33,7 @@ doSomething : Str, a -> Task ok DecodeError | a has Encoding, ok has Decoding
 doSomething = \name, rawArg ->
     Effect.doEffect (name |> toJson |> Box.box) (rawArg |> toJson |> Box.box)
     |> Effect.map (\result ->
-        Box.unbox result
+        result
             |> fromBytesPartial (jsonWithOptions {fieldNameMapping: SnakeCase}) 
             |> .result
     )
@@ -43,4 +44,14 @@ toJson = \value ->
     value
     |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
     |> List.append 0
-    
+
+await : Task a b, (a -> Task c b) -> Task c b
+await = \task, transform ->
+    effect = Effect.after
+        (toEffect task)
+        \result ->
+            when result is
+                Ok a -> transform a |> toEffect
+                Err b -> err b |> toEffect
+
+    fromEffect effect

@@ -13,10 +13,13 @@ app "echo"
 
 
 main = \arg1 ->
-    printStr "hello from roc \(arg1)"
+    Task.await readStr \text ->
+        printStr "start arg: \(arg1), read arg: \(text)"
 
 printStr : Str -> Task {} DecodeError
 printStr = \str ->
     Task.doSomething "print_str" str
 
-#readStr : Task Str *
+readStr : Task Str DecodeError
+readStr =
+    Task.doSomething "read_str" {}
