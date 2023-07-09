@@ -46,35 +46,64 @@ export fn allocUint8(length: u32) [*]u8 {
     return slice.ptr;
 }
 
-const RocList = struct { pointer: [*]u8, length: usize, capacity: usize };
-const Job = struct { a1: [*]u8, a2: [*]u8, a3: [*]u8, a4: [*]u8, name: RocList, value: RocList, a5: [*]u8 };
-
-//extern fn roc__mainForHost_1_exposed(job: *Job, argument: *RocList) void;
-extern fn roc__mainForHost_1_exposed(job: [*]u8, argument: *RocList) void;
+const RocJob = extern struct { placeholder_I_dont_understand: u128, value: RocList };
+const RocList = extern struct { pointer: [*]u8, length: usize, capacity: usize };
+// TODO: u32 works, but use a pointer, so it is more clear
+//extern fn roc__mainForHost_1_exposed(job: u32, argument: *RocList) void;
+//extern fn roc__mainForHost_1_exposed_generic(argument: *RocList) RocJob;
+extern fn roc__mainForHost_1_exposed_generic(result: *RocJob, argument: *RocList) void;
+extern fn roc__mainForHost_1_exposed_size() i64;
 extern fn roc__mainForHost_0_caller(arg: *RocList, callback_pointer: [*]u8, result: *RocList) void;
+extern fn roc__mainForHost_0_result_size() i64;
+
+const ExternJob = extern struct { callback: u32, value: u32 };
+
+const allocator = std.heap.page_allocator;
 
 // run_roc uses the webassembly memory at the given pointer to call roc.
 //
 // It retuns a new pointer to the data returned by roc.
-export fn run_roc(pointer: [*]u8, length: usize) [*]const u8 {
-    defer std.heap.page_allocator.free(pointer[0..length]);
+export fn run_roc(argument_pointer: [*]u8, length: usize) u32 {
+    //defer std.heap.page_allocator.free(argument_pointer[0..length]);
 
-    const arg = &RocList{ .pointer = pointer, .length = length, .capacity = length };
+    const arg = &RocList{ .pointer = argument_pointer, .length = length, .capacity = length };
+    const return_size = @intCast(u32, roc__mainForHost_1_exposed_size());
+    const raw_output = roc_alloc(@intCast(usize, return_size), @alignOf(u64)).?;
+    var roc_result = @ptrCast(*RocJob, @alignCast(@alignOf(RocJob), raw_output)).*;
 
-    //var job: Job = undefined;
-    var job: [*]u8 = undefined;
-    roc__mainForHost_1_exposed(job, arg);
+    //var roc_result: RocJob = undefined;
+    roc__mainForHost_1_exposed_generic(&roc_result, arg);
 
-    return job;
+    var callback_pointer = @ptrToInt(&roc_result);
+    //return callback_pointer;
+
+    // var roc_job = @ptrCast(*RocJob, @alignCast(@alignOf(RocJob), roc_result));
+
+    var job = allocator.create(ExternJob) catch
+        @panic("failed to allocate result type");
+
+    //return callback_pointer;
+
+    job.callback = callback_pointer;
+    job.value = @ptrToInt(roc_result.value.pointer);
+    return @ptrToInt(job);
+
+    // var job = ExternJob{ .callback = roc_result, .value = 0 };
+
+    // return job.callback;
 }
 
-export fn callback(callback_pointer: [*]u8, argument_pointer: [*]u8, argument_length: usize) [*]const u8 {
+export fn run_callback(callback_pointer: [*]u8, argument_pointer: [*]u8, argument_length: usize) [*]const u8 {
     const arg = &RocList{ .pointer = argument_pointer, .length = argument_length, .capacity = argument_length };
 
-    var callresult: RocList = undefined;
-    roc__mainForHost_0_caller(arg, callback_pointer, &callresult);
+    const return_size = @intCast(u32, roc__mainForHost_1_exposed_size());
+    const raw_output = roc_alloc(@intCast(usize, return_size), @alignOf(u64)).?;
+    var roc_result = @ptrCast(*RocList, @alignCast(@alignOf(RocList), raw_output)).*;
 
-    return callresult.pointer;
+    //var callresult: RocList = undefined;
+    roc__mainForHost_0_caller(arg, callback_pointer, &roc_result);
+
+    return roc_result.pointer;
 }
 
 pub fn main() u8 {

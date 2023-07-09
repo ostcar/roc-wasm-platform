@@ -12,9 +12,7 @@
 
       load_wasm("./echo.wasm").then((run_roc) => {
         function eventFn() {
-          run_roc(input1.value, input2.value, (string_from_roc) => {
-            output.textContent = string_from_roc;
-          });
+          output.textContent = run_roc(input1.value, input2.value);
         }
 
         both_inputs.forEach(el => el.addEventListener('input', eventFn));
