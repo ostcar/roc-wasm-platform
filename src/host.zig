@@ -35,6 +35,18 @@ export fn roc_dealloc(c_ptr: *anyopaque, alignment: u32) callconv(.C) void {
 
 // NOTE roc_panic has to be provided by the wasm runtime, so it can throw an exception
 
+// // roc_fx_do_effect is called from roc to do some effect
+// export fn roc_fx_do_effect(name: RocList, argument: RocList) RocList {
+//     // TODO: If effect would use a Box, would it be a pointer that directly
+//     // could be transfaired to wasm? In this case this implementaiton would not
+//     // be needed??
+//     const result_pointer = do_effect(name.pointer, argument.pointer);
+
+// }
+
+// // do_effect has to be implemented by the wasm-host and colled from roc_fx_do_effect
+// extern fn do_effect(name: [*]u8, argument: [*]u8) [*]u8;
+
 // allocUint8 has to be called before run_roc to get some memory in the
 // webassembly module.
 //
@@ -48,52 +60,56 @@ export fn allocUint8(length: u32) [*]u8 {
 }
 
 const RocList = extern struct { pointer: [*]u8, length: usize, capacity: usize };
-const RocJob = extern struct { placeholder_I_dont_understand: u128, name: RocList, value: RocList };
 
-extern fn roc__mainForHost_1_exposed_generic(result: *RocJob, argument: *RocList) void;
+extern fn roc__mainForHost_1_exposed_generic([*]u8, *RocList) void;
+extern fn roc__mainForHost_0_result_size() i64;
 extern fn roc__mainForHost_1_exposed_size() i64;
-extern fn roc__mainForHost_0_caller(arg: *RocList, callback_pointer: [*]u8, result: *RocList) void;
+extern fn roc__mainForHost_0_caller(*const u8, [*]u8, [*]u8) void;
 extern fn roc__mainForHost_0_size() i64;
-
-const ExternJob = extern struct { callback: *RocJob, name: [*]u8, value: [*]u8 };
 
 // run_roc uses the webassembly memory at the given pointer to call roc.
 //
 // It retuns a new pointer to the data returned by roc.
-export fn run_roc(argument_pointer: [*]u8, length: usize) [*]u8 {
+export fn run_roc(argument_pointer: [*]u8, length: usize) void {
     defer std.heap.page_allocator.free(argument_pointer[0..length]);
 
     const arg = &RocList{ .pointer = argument_pointer, .length = length, .capacity = length };
-    const return_size = @intCast(u32, roc__mainForHost_1_exposed_size());
-    // TODO: This has to be deallocated
-    const raw_output = roc_alloc(@intCast(usize, return_size), @alignOf(u64)).?;
-    var roc_result = @ptrCast(*RocJob, @alignCast(@alignOf(RocJob), raw_output));
 
-    roc__mainForHost_1_exposed_generic(roc_result, arg);
+    // The size might be zero; if so, make it at least 8 so that we don't have a nullptr
+    const size = std.math.max(@intCast(usize, roc__mainForHost_1_exposed_size()), 8);
+    const raw_output = roc_alloc(@intCast(usize, size), @alignOf(u64)).?;
+    var output = @ptrCast([*]u8, raw_output);
 
-    // TODO: This has to be deallocated
-    var job = allocator.create(ExternJob) catch
-        @panic("failed to allocate result type");
+    defer {
+        roc_dealloc(raw_output, @alignOf(u64));
+    }
 
-    job.callback = roc_result;
-    job.name = roc_result.name.pointer;
-    job.value = roc_result.value.pointer;
-    return @ptrCast([*]u8, job);
+    roc__mainForHost_1_exposed_generic(output, arg);
+
+    const closure_data_pointer = @ptrCast([*]u8, output);
+
+    call_the_closure(closure_data_pointer);
+
+    return;
 }
 
-export fn run_callback(callback_pointer: [*]u8, argument_pointer: [*]u8, argument_length: usize) [*]u8 {
-    defer std.heap.page_allocator.free(argument_pointer[0..argument_length]);
+// From: crates/cli_testing_examples/benchmarks/platform/host.zig
+fn call_the_closure(closure_data_pointer: [*]u8) void {
+    // The size might be zero; if so, make it at least 8 so that we don't have a nullptr
+    const size = std.math.max(roc__mainForHost_0_result_size(), 8);
+    const raw_output = allocator.allocAdvanced(u8, @alignOf(u64), @intCast(usize, size), .at_least) catch unreachable;
+    var output = @ptrCast([*]u8, raw_output);
 
-    const arg = &RocList{ .pointer = argument_pointer, .length = argument_length, .capacity = argument_length };
+    defer {
+        allocator.free(raw_output);
+    }
 
-    const return_size = @intCast(u32, roc__mainForHost_0_size());
-    // TODO: This has to be deallocated
-    const raw_output = roc_alloc(@intCast(usize, return_size), @alignOf(u64)).?;
-    var roc_result = @ptrCast(*RocList, @alignCast(@alignOf(RocList), raw_output));
+    const flags: u8 = 0;
 
-    roc__mainForHost_0_caller(arg, callback_pointer, roc_result);
+    roc__mainForHost_0_caller(&flags, closure_data_pointer, output);
 
-    return roc_result.pointer;
+    // The closure returns result, nothing interesting to do with it
+    return;
 }
 
 pub fn main() u8 {

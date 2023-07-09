@@ -1,7 +1,7 @@
 <html>
   <body>
-    <input id="input1" placeholder="Enter some text">
-    <input id="input2" placeholder="Enter some text">
+    <input id="input1" placeholder="This is the first argument">
+    <input id="input2" placeholder="This is used as input">
     <div id="output"></div>
     <script src="./host.js"></script>
     <script>
@@ -12,7 +12,9 @@
 
       load_wasm("./echo.wasm").then((run_roc) => {
         function eventFn() {
-          output.textContent = run_roc(input1.value, input2.value);
+          run_roc(input1.value, input2.value, (str) =>{
+            output.textContent = str;
+          });
         }
 
         both_inputs.forEach(el => el.addEventListener('input', eventFn));
