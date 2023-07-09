@@ -57,6 +57,7 @@ async function load_wasm(wasm_file) {
 
   const importObj = {
     // TODO: Why do I have to define this?
+    // Can probably be removed when this is fixed: https://github.com/roc-lang/roc/issues/5585
     wasi_snapshot_preview1: {
       proc_exit: (code) => {
         if (code !== 0) {
@@ -71,8 +72,8 @@ async function load_wasm(wasm_file) {
       roc_panic: (_pointer, _tag_id) => {
         throw "Roc panicked!";
       },
-      roc_fx_doEffect: (name, name2, argument) => {
-        return do_effect(name, name2, argument);
+      roc_fx_doEffect: (output_pointer, name_pointer, argument_pointer) => {
+        return do_effect(output_pointer, name_pointer, argument_pointer);
       }
     },
   };

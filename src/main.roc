@@ -1,5 +1,5 @@
 platform "wasm"
-    requires {} { main : Str -> Task ok err }
+    requires {} { main : a -> Task ok err | a has Decoding }
     exposes [
         Task,
     ]
