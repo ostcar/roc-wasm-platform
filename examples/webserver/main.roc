@@ -14,17 +14,14 @@ Request : {
     body : Str,
 }
 
+Response : {
+    body : Str,
+    statusCode : U16,
+}
 
+main : Request -> Task Response Str
 main = \request -> 
-    {} <- write_status 200 |> Task.await
-    "echo \(request.body)"
-    |> Str.toUtf8
-    |> write_content
-
-writeStatusCode : Int -> Task {} DecodeError
-writeStatusCode = \code ->
-    Task.doSomething "write_status" code
-
-writeContent : List U8 -> Task {} DecodeError
-writeContent = \bytes ->
-    Task.doSomething "write_content" bytes
+    Task.ok {
+        body: "hello from roc: \(request.body)",
+        statusCode: 200,
+    }
