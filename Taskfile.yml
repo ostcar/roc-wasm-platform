@@ -1,0 +1,11 @@
+version: '3'
+
+tasks:
+  test:
+    dir: "test"
+    cmds:
+      - go test
+
+  clear-cache:
+    cmds:
+      - rm -r src/zig-cache

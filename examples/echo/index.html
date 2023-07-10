@@ -1,18 +1,29 @@
 <html>
   <body>
-    <input placeholder="Enter some text">
+    <input id="input1" placeholder="This is the first argument">
+    <input id="input2" placeholder="This is used as input">
     <div id="output"></div>
     <script src="./host.js"></script>
     <script>
-      const input = document.querySelector("input");
+      const both_inputs = document.querySelectorAll("input");
+      const input1 = document.getElementById("input1");
+      const input2 = document.getElementById("input2");
       const output = document.getElementById("output");
 
       load_wasm("./echo.wasm").then((run_roc) => {
-        input.addEventListener("input", (event) => {
-          run_roc(event.target.value, (string_from_roc) => {
-            output.textContent = string_from_roc;
-          });
-        });
+        function print(str) {
+          output.textContent = str;
+        }
+        function read() {
+          return input2.value;
+        }
+
+        function eventFn() {
+          run_roc(input1.value, print, read);
+        }
+
+        both_inputs.forEach(el => el.addEventListener('input', eventFn));
+        eventFn();
       });      
     </script>
   </body>

@@ -1,4 +1,4 @@
-module github.com/ostcar/goroc/examples/webserver
+module github.com/ostcar/roc_wasm_platform/examples/webserver
 
 go 1.20
 
