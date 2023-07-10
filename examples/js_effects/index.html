@@ -1,0 +1,20 @@
+<html>
+  <body>
+    <input id="inputElement" placeholder="This is the first argument">
+    <div id="output"></div>
+    <script src="./host.js"></script>
+    <script>
+      const inputElement = document.getElementById("inputElement");
+      const output = document.getElementById("output");
+
+      load_wasm("./echo.wasm").then((run_roc) => {
+        function eventFn() {
+          output.textContent = run_roc(inputElement.value);
+        }
+
+        inputElement.addEventListener('input', eventFn);
+        eventFn();
+      });      
+    </script>
+  </body>
+</html>

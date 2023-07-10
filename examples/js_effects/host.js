@@ -1,3 +1,31 @@
+function do_effect(memory, name_pointer, arg_pointer) {
+  const name_slice = new Uint32Array(memory.buffer, name_pointer, 3);
+  const name = decodeZeroTerminatedString(memory, name_slice[0]);
+
+  switch (name) {
+    case "console_log":
+      console.log(get_argument(memory, arg_pointer));
+      return "";
+
+    case "time":
+      // An effect can return anything that is decodable. In this case a number.
+      return new Date().getTime();
+
+    case "localstorage_set":
+      const {key, value} = get_argument(memory, arg_pointer);
+      localStorage.setItem(key, value);
+      return "";
+
+    case "localstorage_get":
+      const getKey = get_argument(memory, arg_pointer);
+      return localStorage.getItem(getKey);
+
+    default:
+      console.log("unknown Effect: ", name)
+      return "unknown effect"
+  }
+}
+
 function decodeZeroTerminatedString(memory, pointer) {
   // TODO: Use something like: https://github.com/Pyrolistical/typescript-wasm-zig/blob/9ba1f26a24fcf97a4f18257efa82e6b6fceb0be0/index.ts#L33
   const memorySlice = new Uint8Array(memory.buffer, pointer);
@@ -18,38 +46,14 @@ function send_string(memory, allocater, str) {
   return {pointer: pointer, length: message.length};
 }
 
-function print_memory(memory) {
-  console.log(new Uint8Array(memory.buffer))
+function get_argument(memory, arg_pointer) {
+  const argument_slice = new Uint32Array(memory.buffer, arg_pointer, 3);
+  return decodeZeroTerminatedString(memory, argument_slice[0]);
 }
-
 
 async function load_wasm(wasm_file) {
   let memory = undefined;
   let allocater = undefined;
-  let print_str_callback = undefined;
-  let read_str_callback = undefined;
-
-  function do_effect(name_pointer,  arg_pointer) {
-    const name_slice = new Uint32Array(memory.buffer, name_pointer, 3);
-    const name = decodeZeroTerminatedString(memory, name_slice[0]);
-  
-    let return_value;
-    switch (name) {
-      case "print_str":
-        const argument_slice = new Uint32Array(memory.buffer, arg_pointer, 3);
-        const argument = decodeZeroTerminatedString(memory, argument_slice[0]);
-  
-        print_str_callback(argument);
-        return "foobar"
-  
-      case "read_str":
-        return read_str_callback();
-  
-      default:
-        console.log("unknown Effect: ", name)
-        return "unknown effect"
-    }
-  }
 
   const importObj = {
     // TODO: Why do I have to define this?
@@ -69,7 +73,7 @@ async function load_wasm(wasm_file) {
         throw "Roc panicked!";
       },
       roc_fx_doEffect: (output_pointer, name_pointer, argument_pointer) => {
-        const value = do_effect(name_pointer, argument_pointer);
+        const value = do_effect(memory, name_pointer, argument_pointer);
 
         const send_data = send_string(memory, allocater, value);
         const out_slice = new Uint32Array(memory.buffer, output_pointer, 3);
@@ -86,17 +90,17 @@ async function load_wasm(wasm_file) {
   allocater = wasm.instance.exports.allocUint8;
   const run_roc = wasm.instance.exports.run_roc;
 
-  return function (input, print_str, read_str) {
-    try {
-      print_str_callback = print_str;
-      read_str_callback = read_str;
+  if (allocater === undefined) {
+    throw "You have to clear the zig cache befor building the wasm module!"
+  }
 
+  return function (input) {
+    try {
       const message = send_string(memory, allocater, input)
 
       // Call the roc code
       const result_pointer = run_roc(message.pointer, message.length);
       const result_message = decodeZeroTerminatedString(memory, result_pointer);
-      console.log(result_message)
       return result_message;
 
     } catch (e) {
@@ -105,9 +109,6 @@ async function load_wasm(wasm_file) {
         console.error(e);
       }
 
-    } finally {
-      print_str_callback = undefined;
-      read_str_callback = undefined;
     }
   }
 }

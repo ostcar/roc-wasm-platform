@@ -9,6 +9,8 @@ interface Task
         mapErr,
         onErr,
         attempt,
+        map,
+        fromResult,
     ]
     imports [
         Effect.{ Effect },
@@ -36,6 +38,17 @@ await = \task, transform ->
         \result ->
             when result is
                 Ok a -> transform a |> toEffect
+                Err b -> err b |> toEffect
+
+    fromEffect effect
+
+map : Task a c, (a -> b) -> Task b c
+map = \task, transform ->
+    effect = Effect.after
+        (toEffect task)
+        \result ->
+            when result is
+                Ok a -> ok (transform a) |> toEffect
                 Err b -> err b |> toEffect
 
     fromEffect effect
@@ -71,9 +84,21 @@ attempt = \task, transform ->
 
     fromEffect effect
 
-doSomething : Str, a -> Task ok DecodeError | a has Encoding, ok has Decoding
+fromResult : Result a b -> Task a b
+fromResult = \result ->
+    when result is
+        Ok a -> ok a
+        Err b -> err b
+
+doSomething : Str, a -> Task ok Str | a has Encoding, ok has Decoding
 doSomething = \name, rawArg ->
     Effect.doEffect (name |> toJson) (rawArg |> toJson)
-    |> Effect.map \result ->
-        fromJson result
+    |> Effect.map \result -> 
+        if List.isEmpty result then
+            Err "Empty List"
+        else
+            fromJson result
+            |> Result.mapErr \_ -> 
+                orig = Str.fromUtf8 result |> Result.withDefault "Wrong utf8"
+                "Decoding error: Orig was \(orig)"
     |> Task.fromEffect

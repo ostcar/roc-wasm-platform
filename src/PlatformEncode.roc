@@ -4,7 +4,8 @@ interface PlatformEncode
         fromJson,
     ]
     imports [
-        json.Core.{ jsonWithOptions },
+        
+        json.Core.{ json, jsonWithOptions },
         Encode.{ toBytes },
         Decode.{ fromBytesPartial },
     ]
@@ -16,5 +17,6 @@ toJson = \value ->
     |> List.append 0
 
 fromJson = \value ->
-    fromBytesPartial value (jsonWithOptions { fieldNameMapping: SnakeCase })
+    #fromBytesPartial value (jsonWithOptions { fieldNameMapping: SnakeCase })
+    fromBytesPartial value json
     |> .result
