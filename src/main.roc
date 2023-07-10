@@ -1,5 +1,5 @@
 platform "wasm"
-    requires {} { main : a ->  LastTask b | a has Decoding, b has Encoding }
+    requires {} { main : a -> Task ok err | a has Decoding, ok has Encoding, err has Encoding }
     exposes [
         Task,
     ]
@@ -7,29 +7,36 @@ platform "wasm"
         json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.1.0/xbO9bXdHi7E9ja6upN5EJXpDoYm7lwmJ8VzL7a5zhYE.tar.br",
     }
     imports [
-        json.Core.{ jsonWithOptions },
-        Decode.{ fromBytesPartial },
-        Task.{ Task, LastTask },
-        Encode.{ toBytes },
+        PlatformEncode.{ toJson, fromJson },
+        Task.{ Task },
+        Effect.{ Effect },
     ]
     provides [mainForHost]
 
 mainForHost = \encodedArg ->
-    decoded =
-        encodedArg
-        |> fromBytesPartial (jsonWithOptions { fieldNameMapping: SnakeCase })
-
-    when decoded.result is
+    when fromJson encodedArg is
         Ok arg ->
             main arg
-            |> Task.mapLast toJson
+            |> resolveTask
 
         Err _ ->
-            Task.lastValue ("Something is wrong" |> toJson)
+            "Something is wrong" |> resultEffect
 
+resolveTask : Task ok err -> Effect (List U8) | ok has Encoding, err has Encoding
+resolveTask = \task ->
+    transform : Result ok err -> List U8 | ok has Encoding, err has Encoding
+    transform = \result ->
+        when result is
+            Ok ok ->
+                toJson ok
 
-toJson : a -> List U8 | a has Encoding
-toJson = \value ->
-    value
-    |> toBytes (jsonWithOptions { fieldNameMapping: SnakeCase })
-    |> List.append 0
+            Err err ->
+                toJson err
+
+    task
+    |> Task.toEffect
+    |> Effect.map transform
+
+resultEffect : a -> Effect (List U8) | a has Encoding
+resultEffect = \v ->
+    Effect.always (toJson v)

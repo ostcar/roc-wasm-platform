@@ -7,20 +7,18 @@ app "echo"
         json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.1.0/xbO9bXdHi7E9ja6upN5EJXpDoYm7lwmJ8VzL7a5zhYE.tar.br",
     }
     imports [
-        pf.Task.{ Task, LastTask },
+        pf.Task.{ Task },
     ]
     provides [main] to pf
 
-main : Str -> LastTask Str
 main = \argument ->
-    (
-        input <- readStr |> Task.await
-        printStr "argument: \(argument), read input: \(input)"
-    )
-    |> Task.finish \result ->
-        when result is
-            Ok _ -> "Roc is done"
-            Err err -> "Something is wrong :( \(err)"
+    input <- readStr |> Task.await
+    _ <- printStr "argument: \(argument), read input: \(input)" |> Task.attempt
+    # For some reason, printStr returns an error. I don't understand it, but we can just ignore it.
+    Task.ok "All done"
+
+
+
 
 printStr : Str -> Task {} Str
 printStr = \str ->

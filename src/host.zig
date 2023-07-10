@@ -108,7 +108,7 @@ fn call_the_closure(closure_data_pointer: [*]u8) [*]u8 {
 
     roc__mainForHost_0_caller(&flags, closure_data_pointer, output);
 
-    // The closure returns result, nothing interesting to do with it
+    // The closure returns a Result (List U8) (List U8)
     return output.pointer;
 }
 

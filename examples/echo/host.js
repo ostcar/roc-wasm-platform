@@ -29,29 +29,25 @@ async function load_wasm(wasm_file) {
   let print_str_callback = undefined;
   let read_str_callback = undefined;
 
-  function do_effect(output_pointer, name_pointer,  arg_pointer) {
+  function do_effect(name_pointer,  arg_pointer) {
     const name_slice = new Uint32Array(memory.buffer, name_pointer, 3);
     const name = decodeZeroTerminatedString(memory, name_slice[0]);
   
+    let return_value;
     switch (name) {
       case "print_str":
         const argument_slice = new Uint32Array(memory.buffer, arg_pointer, 3);
         const argument = decodeZeroTerminatedString(memory, argument_slice[0]);
   
         print_str_callback(argument);
-        break
+        return "foobar"
   
       case "read_str":
-        const value = read_str_callback();
-        const send_data = send_string(memory, allocater, value);
-        const out_slice = new Uint32Array(memory.buffer, output_pointer, 3);
-        out_slice[0] = send_data.pointer;
-        out_slice[1] = send_data.length;
-        out_slice[2] = send_data.length;
-        break
+        return read_str_callback();
   
       default:
         console.log("unknown Effect: ", name)
+        return "unknown effect"
     }
   }
 
@@ -73,7 +69,13 @@ async function load_wasm(wasm_file) {
         throw "Roc panicked!";
       },
       roc_fx_doEffect: (output_pointer, name_pointer, argument_pointer) => {
-        return do_effect(output_pointer, name_pointer, argument_pointer);
+        const value = do_effect(name_pointer, argument_pointer);
+
+        const send_data = send_string(memory, allocater, value);
+        const out_slice = new Uint32Array(memory.buffer, output_pointer, 3);
+        out_slice[0] = send_data.pointer;
+        out_slice[1] = send_data.length;
+        out_slice[2] = send_data.length;
       }
     },
   };
